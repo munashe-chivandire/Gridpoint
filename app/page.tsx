@@ -463,7 +463,7 @@ function FilterDropdown({
   options: string[]
   value: string
   onChange: (v: string) => void
-  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+  icon: React.ComponentType<any>
   flex?: string
   borderRight?: boolean
 }) {
