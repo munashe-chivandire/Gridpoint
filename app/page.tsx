@@ -114,7 +114,7 @@ function Logo({ className, size = "sm" }: { className?: string; size?: "sm" | "m
 const navLinks = ["Solutions", "Industries", "Data", "Resources", "Pricing"]
 
 const megaMenuSolutions = [
-  { icon: RiHome4Line, title: "Property Marketplace", desc: "Search 3,000+ listings across Zimbabwe — buy, rent, or invest.", href: "#" },
+  { icon: RiHome4Line, title: "Property Marketplace", desc: "Search 3,000+ listings across Zimbabwe — buy, rent, or invest.", href: "/marketplace" },
   { icon: RiSearchLine, title: "Prospecting & Valuations", desc: "AVM, CAMA, CMA and 6 more valuation models at your fingertips.", href: "#" },
   { icon: RiBarChartBoxLine, title: "Data & Analytics", desc: "155M+ property records, market indices, and suburb profiles.", href: "#" },
   { icon: RiTeamLine, title: "Real Estate CRM", desc: "Manage leads, run prospecting workflows, and skip trace owners.", href: "#" },
@@ -813,7 +813,7 @@ function Hero() {
               return (
                 <Link
                   key={mod.label}
-                  href="#"
+                  href={mod.label === "Marketplace" ? "/marketplace" : "#"}
                   className="group flex flex-col items-center gap-2 rounded-xl px-2 py-4 text-center card-hover"
                   style={{
                     backgroundColor: "rgba(255,255,255,0.6)",
@@ -1052,9 +1052,13 @@ function SolutionsSection() {
                     ))}
                   </div>
                 )}
-                <div className="mt-5 flex items-center gap-1 text-[13px] font-medium" style={{ color: "#FFFFFF" }}>
+                <Link
+                  href={isFeatured ? "/marketplace" : "#"}
+                  className="mt-5 flex items-center gap-1 text-[13px] font-medium transition-all hover:gap-2"
+                  style={{ color: "#FFFFFF" }}
+                >
                   {isFeatured ? "Explore Marketplace" : "Learn more"} {isFeatured ? <RiArrowRightLine size={14} /> : <RiArrowRightSLine size={16} />}
-                </div>
+                </Link>
               </div>
             )
           })}

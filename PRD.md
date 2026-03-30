@@ -52,7 +52,7 @@ The real estate market in Zimbabwe (and broader Africa) suffers from:
 **Functional Requirements:**
 - Search bar with Property Type selector and Location input
 - Tabs: **Buy**, **Rent**, **Developments**
-- Featured property listings with:
+- Feat  ured property listings with:
   - Property image (with 3D walkthrough badge support)
   - Price, bedrooms, bathrooms, square footage, lot size
   - Address and location

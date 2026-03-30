@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const ri = require\\(''''./node_modules/@remixicon/react/dist/index.js''''\\); const keys = Object.keys\\(ri\\).filter\\(k => k.includes\\(''''Group''''\\) || k.includes\\(''''Scales''''\\) || k.includes\\(''''Community''''\\) || k.includes\\(''''RoadMap''''\\) || k.includes\\(''''PieChart''''\\) || k.includes\\(''''Building''''\\) || k.includes\\(''''Leaf''''\\) || k.includes\\(''''Phone''''\\) || k.includes\\(''''Smartphone''''\\)\\); console.log\\(keys.join\\(''''\\\\n''''\\)\\)\")",
+      "mcp__claude_ai_Vercel__deploy_to_vercel",
+      "Bash(cd /c/Users/User/Desktop/\"New folder\"/Gridpoint)",
+      "Bash(npx vercel:*)",
+      "mcp__claude_ai_Vercel__get_project",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

@@ -10,7 +10,15 @@ import {
   RiArrowRightLine,
   RiGoogleLine,
   RiAppleLine,
+  RiErrorWarningLine,
+  RiLoader4Line,
 } from "@remixicon/react"
+
+type LoginErrors = {
+  email?: string
+  password?: string
+  form?: string
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -18,6 +26,70 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [errors, setErrors] = useState<LoginErrors>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [isLoading, setIsLoading] = useState(false)
+
+  const validate = (vals = { email, password }) => {
+    const errs: LoginErrors = {}
+    if (!vals.email.trim()) {
+      errs.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals.email)) {
+      errs.email = "Enter a valid email address"
+    }
+    if (!vals.password) {
+      errs.password = "Password is required"
+    }
+    return errs
+  }
+
+  const handleBlur = (field: string) => {
+    setFocusedField(null)
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    const errs = validate()
+    setErrors((prev) => ({ ...prev, [field]: errs[field as keyof LoginErrors] }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTouched({ email: true, password: true })
+    const errs = validate()
+    setErrors(errs)
+    if (errs.email || errs.password) return
+
+    setIsLoading(true)
+    setErrors({})
+    // Simulate auth request — replace with real API call
+    await new Promise((r) => setTimeout(r, 1500))
+    setIsLoading(false)
+    setErrors({ form: "Invalid email or password. Please try again." })
+  }
+
+  const fieldError = (field: string) =>
+    touched[field] ? errors[field as keyof LoginErrors] : undefined
+
+  const fieldBorder = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--border-col)"
+
+  const fieldBg = (field: string) =>
+    fieldError(field)
+      ? "rgba(239,68,68,0.04)"
+      : focusedField === field
+      ? "var(--brand-subtle)"
+      : "var(--bg-base)"
+
+  const fieldShadow = (field: string) =>
+    fieldError(field)
+      ? "0 0 0 4px rgba(239,68,68,0.06)"
+      : focusedField === field
+      ? "0 0 0 4px rgba(0,176,240,0.08)"
+      : "none"
+
+  const labelColor = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--text-secondary)"
+
+  const iconColor = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--text-muted)"
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -130,28 +202,42 @@ export default function LoginPage() {
             <div className="flex-1 h-px" style={{ backgroundColor: "var(--border-col)" }} />
           </div>
 
+          {/* Form-level error banner */}
+          {errors.form && (
+            <div
+              className="flex items-center gap-3 p-3.5 rounded-xl mb-5"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.18)",
+              }}
+            >
+              <RiErrorWarningLine size={15} style={{ color: "#ef4444", flexShrink: 0 }} />
+              <span className="text-[13px]" style={{ color: "#ef4444" }}>{errors.form}</span>
+            </div>
+          )}
+
           {/* Form */}
-          <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
             {/* Email */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <label
                 className="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: focusedField === "email" ? "#00B0F0" : "var(--text-secondary)" }}
+                style={{ color: labelColor("email") }}
               >
                 Email
               </label>
               <div
                 className="flex items-center gap-3 h-[46px] rounded-xl px-4 transition-all duration-200"
                 style={{
-                  border: `1.5px solid ${focusedField === "email" ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: focusedField === "email" ? "var(--brand-subtle)" : "var(--bg-base)",
-                  boxShadow: focusedField === "email" ? "0 0 0 4px rgba(0,176,240,0.08)" : "none",
+                  border: `1.5px solid ${fieldBorder("email")}`,
+                  backgroundColor: fieldBg("email"),
+                  boxShadow: fieldShadow("email"),
                 }}
               >
                 <RiMailLine
                   size={16}
                   style={{
-                    color: focusedField === "email" ? "#00B0F0" : "var(--text-muted)",
+                    color: iconColor("email"),
                     flexShrink: 0,
                     transition: "color 200ms",
                   }}
@@ -162,20 +248,23 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocusedField("email")}
-                  onBlur={() => setFocusedField(null)}
+                  onBlur={() => handleBlur("email")}
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--text-muted)]"
                   style={{ color: "var(--text-primary)" }}
                   autoComplete="email"
                 />
               </div>
+              {fieldError("email") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("email")}</p>
+              )}
             </div>
 
             {/* Password */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label
                   className="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                  style={{ color: focusedField === "password" ? "#00B0F0" : "var(--text-secondary)" }}
+                  style={{ color: labelColor("password") }}
                 >
                   Password
                 </label>
@@ -190,15 +279,15 @@ export default function LoginPage() {
               <div
                 className="flex items-center gap-3 h-[46px] rounded-xl px-4 transition-all duration-200"
                 style={{
-                  border: `1.5px solid ${focusedField === "password" ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: focusedField === "password" ? "var(--brand-subtle)" : "var(--bg-base)",
-                  boxShadow: focusedField === "password" ? "0 0 0 4px rgba(0,176,240,0.08)" : "none",
+                  border: `1.5px solid ${fieldBorder("password")}`,
+                  backgroundColor: fieldBg("password"),
+                  boxShadow: fieldShadow("password"),
                 }}
               >
                 <RiLockPasswordLine
                   size={16}
                   style={{
-                    color: focusedField === "password" ? "#00B0F0" : "var(--text-muted)",
+                    color: iconColor("password"),
                     flexShrink: 0,
                     transition: "color 200ms",
                   }}
@@ -209,7 +298,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField("password")}
-                  onBlur={() => setFocusedField(null)}
+                  onBlur={() => handleBlur("password")}
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--text-muted)]"
                   style={{ color: "var(--text-primary)" }}
                   autoComplete="current-password"
@@ -223,6 +312,9 @@ export default function LoginPage() {
                   {showPassword ? <RiEyeOffLine size={16} /> : <RiEyeLine size={16} />}
                 </button>
               </div>
+              {fieldError("password") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("password")}</p>
+              )}
             </div>
 
             {/* Remember me */}
@@ -250,21 +342,41 @@ export default function LoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="relative flex items-center justify-center gap-2 h-[46px] rounded-xl text-[14px] font-semibold transition-all duration-200 mt-1 overflow-hidden group"
-              style={{ backgroundColor: "#00B0F0", color: "#fff" }}
+              disabled={isLoading}
+              className="relative flex items-center justify-center gap-2 h-[46px] rounded-xl text-[14px] font-semibold transition-all duration-200 mt-1 overflow-hidden"
+              style={{
+                backgroundColor: "#00B0F0",
+                color: "#fff",
+                opacity: isLoading ? 0.8 : 1,
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
               onMouseEnter={(e) => {
+                if (isLoading) return
                 e.currentTarget.style.backgroundColor = "#1AC3FF"
                 e.currentTarget.style.transform = "translateY(-1px)"
                 e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,176,240,0.3)"
               }}
               onMouseLeave={(e) => {
+                if (isLoading) return
                 e.currentTarget.style.backgroundColor = "#00B0F0"
                 e.currentTarget.style.transform = "translateY(0)"
                 e.currentTarget.style.boxShadow = "none"
               }}
             >
-              Sign In
-              <RiArrowRightLine size={15} />
+              {isLoading ? (
+                <>
+                  <RiLoader4Line
+                    size={16}
+                    style={{ animation: "spin 0.8s linear infinite" }}
+                  />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <RiArrowRightLine size={15} />
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -299,6 +411,13 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

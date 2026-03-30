@@ -15,6 +15,8 @@ import {
   RiBuilding2Line,
   RiBriefcaseLine,
   RiBankLine,
+  RiErrorWarningLine,
+  RiLoader4Line,
 } from "@remixicon/react"
 
 const accountTypes = [
@@ -24,6 +26,14 @@ const accountTypes = [
   { value: "institution", label: "Institution", icon: RiBankLine },
 ]
 
+type SignupErrors = {
+  name?: string
+  email?: string
+  password?: string
+  terms?: string
+  form?: string
+}
+
 export default function SignupPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -32,11 +42,88 @@ export default function SignupPage() {
   const [accountType, setAccountType] = useState("buyer")
   const [agreed, setAgreed] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [errors, setErrors] = useState<SignupErrors>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [isLoading, setIsLoading] = useState(false)
 
   const passwordStrength = Math.min(4, Math.floor(password.length / 3))
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][passwordStrength] || ""
   const strengthColor =
     passwordStrength <= 1 ? "#ef4444" : passwordStrength <= 2 ? "#f59e0b" : passwordStrength <= 3 ? "#00B0F0" : "#22c55e"
+
+  const validate = (vals = { name, email, password, agreed }) => {
+    const errs: SignupErrors = {}
+    if (!vals.name.trim()) {
+      errs.name = "Full name is required"
+    } else if (vals.name.trim().length < 2) {
+      errs.name = "Name must be at least 2 characters"
+    }
+    if (!vals.email.trim()) {
+      errs.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals.email)) {
+      errs.email = "Enter a valid email address"
+    }
+    if (!vals.password) {
+      errs.password = "Password is required"
+    } else if (vals.password.length < 8) {
+      errs.password = "Password must be at least 8 characters"
+    }
+    if (!vals.agreed) {
+      errs.terms = "You must agree to the Terms of Service"
+    }
+    return errs
+  }
+
+  const handleBlur = (field: string) => {
+    setFocusedField(null)
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    const errs = validate()
+    setErrors((prev) => ({ ...prev, [field]: errs[field as keyof SignupErrors] }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const allTouched = { name: true, email: true, password: true, terms: true }
+    setTouched(allTouched)
+    const errs = validate()
+    setErrors(errs)
+    if (errs.name || errs.email || errs.password || errs.terms) return
+
+    setIsLoading(true)
+    setErrors({})
+    // Simulate API call — replace with real registration endpoint
+    await new Promise((r) => setTimeout(r, 1500))
+    setIsLoading(false)
+    setErrors({ form: "An account with this email already exists. Try signing in instead." })
+  }
+
+  const fieldError = (field: string) =>
+    touched[field] ? errors[field as keyof SignupErrors] : undefined
+
+  const fieldBorder = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--border-col)"
+
+  const fieldBg = (field: string) =>
+    fieldError(field)
+      ? "rgba(239,68,68,0.04)"
+      : focusedField === field
+      ? "var(--brand-subtle)"
+      : "var(--bg-base)"
+
+  const fieldShadow = (field: string) =>
+    fieldError(field)
+      ? "0 0 0 4px rgba(239,68,68,0.06)"
+      : focusedField === field
+      ? "0 0 0 4px rgba(0,176,240,0.08)"
+      : "none"
+
+  const labelColor = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--text-secondary)"
+
+  const iconColor = (field: string) =>
+    fieldError(field) ? "#ef4444" : focusedField === field ? "#00B0F0" : "var(--text-muted)"
+
+  const canSubmit = !isLoading
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -195,28 +282,42 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Form-level error banner */}
+          {errors.form && (
+            <div
+              className="flex items-center gap-3 p-3.5 rounded-xl mb-5"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.18)",
+              }}
+            >
+              <RiErrorWarningLine size={15} style={{ color: "#ef4444", flexShrink: 0 }} />
+              <span className="text-[13px]" style={{ color: "#ef4444" }}>{errors.form}</span>
+            </div>
+          )}
+
           {/* Form */}
-          <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
             {/* Full name */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <label
                 className="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: focusedField === "name" ? "#00B0F0" : "var(--text-secondary)" }}
+                style={{ color: labelColor("name") }}
               >
                 Full name
               </label>
               <div
                 className="flex items-center gap-3 h-[46px] rounded-xl px-4 transition-all duration-200"
                 style={{
-                  border: `1.5px solid ${focusedField === "name" ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: focusedField === "name" ? "var(--brand-subtle)" : "var(--bg-base)",
-                  boxShadow: focusedField === "name" ? "0 0 0 4px rgba(0,176,240,0.08)" : "none",
+                  border: `1.5px solid ${fieldBorder("name")}`,
+                  backgroundColor: fieldBg("name"),
+                  boxShadow: fieldShadow("name"),
                 }}
               >
                 <RiUserLine
                   size={16}
                   style={{
-                    color: focusedField === "name" ? "#00B0F0" : "var(--text-muted)",
+                    color: iconColor("name"),
                     flexShrink: 0,
                     transition: "color 200ms",
                   }}
@@ -227,34 +328,37 @@ export default function SignupPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onFocus={() => setFocusedField("name")}
-                  onBlur={() => setFocusedField(null)}
+                  onBlur={() => handleBlur("name")}
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--text-muted)]"
                   style={{ color: "var(--text-primary)" }}
                   autoComplete="name"
                 />
               </div>
+              {fieldError("name") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("name")}</p>
+              )}
             </div>
 
             {/* Email */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <label
                 className="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: focusedField === "email" ? "#00B0F0" : "var(--text-secondary)" }}
+                style={{ color: labelColor("email") }}
               >
                 Email
               </label>
               <div
                 className="flex items-center gap-3 h-[46px] rounded-xl px-4 transition-all duration-200"
                 style={{
-                  border: `1.5px solid ${focusedField === "email" ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: focusedField === "email" ? "var(--brand-subtle)" : "var(--bg-base)",
-                  boxShadow: focusedField === "email" ? "0 0 0 4px rgba(0,176,240,0.08)" : "none",
+                  border: `1.5px solid ${fieldBorder("email")}`,
+                  backgroundColor: fieldBg("email"),
+                  boxShadow: fieldShadow("email"),
                 }}
               >
                 <RiMailLine
                   size={16}
                   style={{
-                    color: focusedField === "email" ? "#00B0F0" : "var(--text-muted)",
+                    color: iconColor("email"),
                     flexShrink: 0,
                     transition: "color 200ms",
                   }}
@@ -265,34 +369,37 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocusedField("email")}
-                  onBlur={() => setFocusedField(null)}
+                  onBlur={() => handleBlur("email")}
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--text-muted)]"
                   style={{ color: "var(--text-primary)" }}
                   autoComplete="email"
                 />
               </div>
+              {fieldError("email") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("email")}</p>
+              )}
             </div>
 
             {/* Password */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <label
                 className="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: focusedField === "password" ? "#00B0F0" : "var(--text-secondary)" }}
+                style={{ color: labelColor("password") }}
               >
                 Password
               </label>
               <div
                 className="flex items-center gap-3 h-[46px] rounded-xl px-4 transition-all duration-200"
                 style={{
-                  border: `1.5px solid ${focusedField === "password" ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: focusedField === "password" ? "var(--brand-subtle)" : "var(--bg-base)",
-                  boxShadow: focusedField === "password" ? "0 0 0 4px rgba(0,176,240,0.08)" : "none",
+                  border: `1.5px solid ${fieldBorder("password")}`,
+                  backgroundColor: fieldBg("password"),
+                  boxShadow: fieldShadow("password"),
                 }}
               >
                 <RiLockPasswordLine
                   size={16}
                   style={{
-                    color: focusedField === "password" ? "#00B0F0" : "var(--text-muted)",
+                    color: iconColor("password"),
                     flexShrink: 0,
                     transition: "color 200ms",
                   }}
@@ -303,7 +410,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField("password")}
-                  onBlur={() => setFocusedField(null)}
+                  onBlur={() => handleBlur("password")}
                   className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--text-muted)]"
                   style={{ color: "var(--text-primary)" }}
                   autoComplete="new-password"
@@ -320,7 +427,7 @@ export default function SignupPage() {
 
               {/* Password strength meter */}
               {password.length > 0 && (
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-3 mt-0.5">
                   <div className="flex gap-1.5 flex-1">
                     {[1, 2, 3, 4].map((level) => (
                       <div
@@ -340,63 +447,90 @@ export default function SignupPage() {
                   </span>
                 </div>
               )}
+
+              {fieldError("password") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("password")}</p>
+              )}
             </div>
 
             {/* Terms */}
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <div
-                className="relative flex h-[18px] w-[18px] mt-0.5 items-center justify-center rounded-md transition-all duration-200 shrink-0"
-                style={{
-                  border: `1.5px solid ${agreed ? "#00B0F0" : "var(--border-col)"}`,
-                  backgroundColor: agreed ? "#00B0F0" : "transparent",
-                  boxShadow: agreed ? "0 0 0 3px rgba(0,176,240,0.12)" : "none",
-                }}
-                onClick={() => setAgreed(!agreed)}
-              >
-                {agreed && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                I agree to Gridpoint&apos;s{" "}
-                <Link href="#" className="underline underline-offset-2 font-medium" style={{ color: "var(--text-primary)" }}>
-                  Terms of Service
-                </Link>
-                {" "}and{" "}
-                <Link href="#" className="underline underline-offset-2 font-medium" style={{ color: "var(--text-primary)" }}>
-                  Privacy Policy
-                </Link>
-              </span>
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <div
+                  className="relative flex h-[18px] w-[18px] mt-0.5 items-center justify-center rounded-md transition-all duration-200 shrink-0"
+                  style={{
+                    border: `1.5px solid ${errors.terms && touched.terms ? "#ef4444" : agreed ? "#00B0F0" : "var(--border-col)"}`,
+                    backgroundColor: agreed ? "#00B0F0" : "transparent",
+                    boxShadow: agreed ? "0 0 0 3px rgba(0,176,240,0.12)" : "none",
+                  }}
+                  onClick={() => {
+                    const next = !agreed
+                    setAgreed(next)
+                    if (touched.terms) {
+                      setErrors((prev) => ({ ...prev, terms: next ? undefined : "You must agree to the Terms of Service" }))
+                    }
+                  }}
+                >
+                  {agreed && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  I agree to Gridpoint&apos;s{" "}
+                  <Link href="#" className="underline underline-offset-2 font-medium" style={{ color: "var(--text-primary)" }}>
+                    Terms of Service
+                  </Link>
+                  {" "}and{" "}
+                  <Link href="#" className="underline underline-offset-2 font-medium" style={{ color: "var(--text-primary)" }}>
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+              {fieldError("terms") && (
+                <p className="text-[12px]" style={{ color: "#ef4444" }}>{fieldError("terms")}</p>
+              )}
+            </div>
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={!agreed}
+              disabled={!canSubmit}
               className="relative flex items-center justify-center gap-2 h-[46px] rounded-xl text-[14px] font-semibold transition-all duration-200 mt-1 overflow-hidden"
               style={{
-                backgroundColor: agreed ? "#00B0F0" : "var(--bg-surface)",
-                color: agreed ? "#fff" : "var(--text-muted)",
-                cursor: agreed ? "pointer" : "not-allowed",
-                opacity: agreed ? 1 : 0.6,
+                backgroundColor: "#00B0F0",
+                color: "#fff",
+                opacity: isLoading ? 0.8 : 1,
+                cursor: isLoading ? "not-allowed" : "pointer",
               }}
               onMouseEnter={(e) => {
-                if (!agreed) return
+                if (isLoading) return
                 e.currentTarget.style.backgroundColor = "#1AC3FF"
                 e.currentTarget.style.transform = "translateY(-1px)"
                 e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,176,240,0.3)"
               }}
               onMouseLeave={(e) => {
-                if (!agreed) return
+                if (isLoading) return
                 e.currentTarget.style.backgroundColor = "#00B0F0"
                 e.currentTarget.style.transform = "translateY(0)"
                 e.currentTarget.style.boxShadow = "none"
               }}
             >
-              Create Account
-              <RiArrowRightLine size={15} />
+              {isLoading ? (
+                <>
+                  <RiLoader4Line
+                    size={16}
+                    style={{ animation: "spin 0.8s linear infinite" }}
+                  />
+                  Creating account…
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <RiArrowRightLine size={15} />
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -416,6 +550,13 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
