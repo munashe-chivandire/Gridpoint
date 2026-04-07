@@ -10,7 +10,6 @@ import {
   RiSearchLine,
   RiFilter3Line,
   RiCloseLine,
-  RiArrowLeftLine,
   RiPhoneLine,
   RiMailLine,
   RiShareLine,
@@ -297,9 +296,6 @@ export default function MarketplacePage() {
   const [detailScrolled, setDetailScrolled] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const [scrollProgress, setScrollProgress] = useState(0)
   const detailScrollRef = useRef<HTMLDivElement>(null)
   const cardScrollRef = useRef<HTMLDivElement>(null)
 
@@ -341,35 +337,14 @@ export default function MarketplacePage() {
     })
   }
 
-  // Scroll card strip to active card
+  // Scroll property list to active card
   useEffect(() => {
     if (!selectedId || !cardScrollRef.current) return
     const el = cardScrollRef.current.querySelector(`[data-card="${selectedId}"]`) as HTMLElement
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
   }, [selectedId])
-
-  const checkCardScroll = useCallback(() => {
-    const el = cardScrollRef.current
-    if (!el) return
-    const atStart = el.scrollLeft < 8
-    const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 8
-    setCanScrollLeft(!atStart)
-    setCanScrollRight(!atEnd)
-    const max = el.scrollWidth - el.clientWidth
-    setScrollProgress(max > 0 ? el.scrollLeft / max : 0)
-  }, [])
-
-  const scrollCards = (dir: "left" | "right") => {
-    cardScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" })
-  }
-
-  // Recheck scroll indicators when visible set changes
-  useEffect(() => {
-    const t = setTimeout(checkCardScroll, 80)
-    return () => clearTimeout(t)
-  }, [visibleProperties, checkCardScroll])
 
   const handleDetailScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setDetailScrolled(e.currentTarget.scrollTop > 20)
@@ -485,10 +460,10 @@ export default function MarketplacePage() {
         </span>
       </header>
 
-      {/* ── Main Layout ──────────────────────────────────────── */}
+      {/* ── Main Layout: Map 2/3 | Properties 1/3 ────────── */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* ── Map Area ───────────────────────────────────────── */}
-        <div className="flex-1 relative overflow-hidden">
+        {/* ── Map Area (2/3) ─────────────────────────────────── */}
+        <div className="relative overflow-hidden" style={{ width: "66.666%" }}>
           <MapComponent
             properties={PROPERTIES}
             selectedId={selectedId}
@@ -497,171 +472,95 @@ export default function MarketplacePage() {
             onHover={setHoveredId}
             onBoundsChange={handleBoundsChange}
           />
-
-          {/* ── Bottom Cards Strip ───────────────────────────── */}
-          <div
-            className="absolute bottom-0 left-0 right-0 z-20 pb-4 pt-16"
-            style={{
-              background:
-                "linear-gradient(to top, rgba(1,25,37,0.97) 0%, rgba(1,25,37,0.8) 55%, transparent 100%)",
-              pointerEvents: "none",
-            }}
-          >
-            {/* Result summary */}
-            <div className="px-4 mb-2.5" style={{ pointerEvents: "none" }}>
-              <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#3a6478" }}>
-                {visibleProperties.length} listing{visibleProperties.length !== 1 ? "s" : ""} in view
-                {visibleProperties.length !== PROPERTIES.length && (
-                  <span style={{ color: "#3a6478", opacity: 0.6 }}> · zoom out to see all {PROPERTIES.length}</span>
-                )}
-              </span>
-            </div>
-
-            {/* Scrollable cards — filtered to map viewport */}
-            <div className="relative" style={{ pointerEvents: "auto" }}>
-              {/* ── Left scroll arrow ── */}
-              {canScrollLeft && (
-                <button
-                  onClick={() => scrollCards("left")}
-                  className="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-start pl-2"
-                  style={{
-                    background: "linear-gradient(to right, rgba(1,18,30,0.92) 0%, rgba(1,18,30,0.6) 55%, transparent 100%)",
-                    width: "56px",
-                    cursor: "pointer",
-                    border: "none",
-                    outline: "none",
-                  }}
-                  aria-label="Scroll cards left"
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150"
-                    style={{
-                      background: "rgba(0,176,240,0.12)",
-                      border: "1px solid rgba(0,176,240,0.3)",
-                      color: "#00B0F0",
-                    }}
-                  >
-                    <RiArrowLeftLine size={13} />
-                  </div>
-                </button>
-              )}
-
-              {/* ── Scrollable row ── */}
-              <div
-                ref={cardScrollRef}
-                onScroll={checkCardScroll}
-                className="flex gap-3 overflow-x-auto px-4 pb-1"
-                style={{
-                  scrollbarWidth: "none",
-                  paddingTop: "10px",
-                }}
-              >
-                {visibleProperties.length === 0 ? (
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                    style={{
-                      background: "rgba(1,35,50,0.9)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      color: "#3a6478",
-                    }}
-                  >
-                    No properties in this area · Pan or zoom out to find listings
-                  </div>
-                ) : (
-                  visibleProperties.map((prop) => (
-                    <PropertyCard
-                      key={prop.id}
-                      prop={prop}
-                      isSelected={prop.id === selectedId}
-                      isHovered={prop.id === hoveredId}
-                      isSaved={savedIds.has(prop.id)}
-                      gradient={GRADIENT_PALETTES[PROPERTIES.indexOf(prop) % GRADIENT_PALETTES.length]}
-                      onSelect={() => handleSelect(prop.id)}
-                      onHover={(id) => setHoveredId(id)}
-                      onSave={toggleSave}
-                    />
-                  ))
-                )}
-                {/* End spacer */}
-                <div className="shrink-0 w-2" />
-              </div>
-
-              {/* ── Right scroll arrow ── */}
-              {canScrollRight && (
-                <button
-                  onClick={() => scrollCards("right")}
-                  className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-end pr-2"
-                  style={{
-                    background: "linear-gradient(to left, rgba(1,18,30,0.92) 0%, rgba(1,18,30,0.6) 55%, transparent 100%)",
-                    width: "56px",
-                    cursor: "pointer",
-                    border: "none",
-                    outline: "none",
-                  }}
-                  aria-label="Scroll cards right"
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150"
-                    style={{
-                      background: "rgba(0,176,240,0.12)",
-                      border: "1px solid rgba(0,176,240,0.3)",
-                      color: "#00B0F0",
-                    }}
-                  >
-                    <RiArrowRightLine size={13} />
-                  </div>
-                </button>
-              )}
-
-              {/* ── Scroll progress track ── */}
-              {(canScrollLeft || canScrollRight) && (
-                <div
-                  className="mx-4 mt-2"
-                  style={{
-                    height: "2px",
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: "99px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${scrollProgress * 100}%`,
-                      background: "linear-gradient(to right, rgba(0,176,240,0.5), rgba(0,176,240,0.9))",
-                      borderRadius: "99px",
-                      transition: "width 0.15s ease",
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* ── Detail Panel ─────────────────────────────────────── */}
-        <aside
-          className="flex-shrink-0 flex flex-col overflow-hidden z-20 transition-all duration-[350ms]"
+        {/* ── Properties Panel (1/3) ────────────────────────── */}
+        <div
+          className="flex flex-col overflow-hidden relative"
           style={{
-            width: detailOpen ? "440px" : "0px",
-            background: "rgba(1, 25, 37, 0.98)",
-            borderLeft: detailOpen ? "1px solid rgba(0,176,240,0.12)" : "none",
-            backdropFilter: "blur(20px)",
+            width: "33.334%",
+            background: "rgba(1, 20, 30, 0.98)",
+            borderLeft: "1px solid rgba(0,176,240,0.1)",
           }}
         >
-          {selectedProp && detailOpen && (
-            <DetailPanel
-              prop={selectedProp}
-              isSaved={savedIds.has(selectedProp.id)}
-              gradient={GRADIENT_PALETTES[PROPERTIES.findIndex((p) => p.id === selectedProp.id) % GRADIENT_PALETTES.length]}
-              scrollRef={detailScrollRef}
-              scrolled={detailScrolled}
-              onClose={handleClose}
-              onSave={toggleSave}
-              onScroll={handleDetailScroll}
-            />
-          )}
-        </aside>
+          {/* Panel header */}
+          <div
+            className="flex-shrink-0 flex items-center justify-between px-4 py-3"
+            style={{
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              background: "rgba(1, 25, 37, 0.95)",
+            }}
+          >
+            <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#3a6478" }}>
+              {visibleProperties.length} listing{visibleProperties.length !== 1 ? "s" : ""} in view
+              {visibleProperties.length !== PROPERTIES.length && (
+                <span style={{ color: "#3a6478", opacity: 0.6 }}> · {PROPERTIES.length} total</span>
+              )}
+            </span>
+          </div>
+
+          {/* Scrollable property list */}
+          <div
+            ref={cardScrollRef}
+            className="flex-1 overflow-y-auto px-3 py-3"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(0,176,240,0.2) transparent",
+            }}
+          >
+            {visibleProperties.length === 0 ? (
+              <div
+                className="flex items-center justify-center gap-2 px-4 py-6 rounded-xl text-xs"
+                style={{
+                  background: "rgba(1,35,50,0.9)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  color: "#3a6478",
+                }}
+              >
+                No properties in this area · Pan or zoom out to find listings
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {visibleProperties.map((prop) => (
+                  <PropertyCard
+                    key={prop.id}
+                    prop={prop}
+                    isSelected={prop.id === selectedId}
+                    isHovered={prop.id === hoveredId}
+                    isSaved={savedIds.has(prop.id)}
+                    gradient={GRADIENT_PALETTES[PROPERTIES.indexOf(prop) % GRADIENT_PALETTES.length]}
+                    onSelect={() => handleSelect(prop.id)}
+                    onHover={(id) => setHoveredId(id)}
+                    onSave={toggleSave}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Detail Panel Overlay ──────────────────────────── */}
+          <div
+            className="absolute inset-0 z-20 flex flex-col overflow-hidden transition-all duration-[350ms]"
+            style={{
+              transform: detailOpen ? "translateX(0)" : "translateX(100%)",
+              background: "rgba(1, 25, 37, 0.98)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            {selectedProp && (
+              <DetailPanel
+                prop={selectedProp}
+                isSaved={savedIds.has(selectedProp.id)}
+                gradient={GRADIENT_PALETTES[PROPERTIES.findIndex((p) => p.id === selectedProp.id) % GRADIENT_PALETTES.length]}
+                scrollRef={detailScrollRef}
+                scrolled={detailScrolled}
+                onClose={handleClose}
+                onSave={toggleSave}
+                onScroll={handleDetailScroll}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -706,7 +605,7 @@ function PropertyCard({
       onClick={onSelect}
       onMouseEnter={() => onHover(prop.id)}
       onMouseLeave={() => onHover(null)}
-      className="flex-shrink-0 w-[272px] rounded-2xl overflow-hidden cursor-pointer"
+      className="w-full rounded-2xl overflow-hidden cursor-pointer"
       style={{
         border: isSelected
           ? "1.5px solid rgba(0,176,240,0.7)"
